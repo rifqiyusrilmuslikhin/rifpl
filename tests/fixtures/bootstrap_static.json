@@ -1,0 +1,6 @@
+{
+  "events": [{"id": 1, "name": "Gameweek 1"}],
+  "elements": [{"id": 101, "code": 5001, "web_name": "Example"}],
+  "teams": [{"id": 1, "name": "Example FC"}],
+  "element_types": [{"id": 3, "singular_name_short": "MID"}]
+}

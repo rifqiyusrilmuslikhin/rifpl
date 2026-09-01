@@ -70,5 +70,20 @@ artifacts/              ignored model artifacts
 reports/                ignored generated metrics and predictions
 ```
 
-Sprint 0 contains scaffold and configuration only. Data ingestion, feature engineering, model
-training, evaluation logic, and decision logic are intentionally deferred.
+## Raw-data foundation
+
+Sprint 1 adds versioned contracts for `player_fixture_fact`, `deadline_snapshot`,
+`player_gameweek_model`, and the player identity registry. The data layer also provides:
+
+- an immutable content-addressed raw artifact store with SHA-256 verification;
+- JSON manifests containing source URL, pinned revision or content hash, UTC retrieval time,
+  season, schema version, media type, byte count, and license note;
+- historical CSV and current-season FPL API loaders with minimum source-schema checks;
+- explicit states for genuine zero, source-unavailable fields, and acquisition failures.
+
+Network calls are isolated in `fpl_model.data.acquisition`. Tests inject local fixture fetchers and
+never require live network access. A live FPL endpoint smoke check is intentionally pending and is
+not part of the deterministic test suite.
+
+Feature engineering, snapshot selection, identity matching, model training, evaluation logic, and
+decision logic remain deferred to later sprints.
