@@ -16,6 +16,7 @@ from fpl_model.features.contract import BASELINE_FEATURE_CONTRACT, BASELINE_FEAT
 KEY_COLUMNS = ("season", "gameweek", "player_key")
 PROVENANCE_COLUMNS = (
     "deadline_utc",
+    "snapshot_captured_at_utc",
     "feature_cutoff_utc",
     "feature_contract_version",
     "feature_source_artifact_ids",
@@ -124,6 +125,7 @@ class BaselineFeatureBuilder:
             (
                 *KEY_COLUMNS,
                 "deadline_utc",
+                "snapshot_captured_at_utc",
                 "feature_cutoff_utc",
                 "team_id_at_deadline",
                 "position_at_deadline",
@@ -134,9 +136,16 @@ class BaselineFeatureBuilder:
             "player_gameweek",
         )
         deadline = _utc_datetime(target["deadline_utc"], "deadline_utc")
+        snapshot_captured = _utc_datetime(
+            target["snapshot_captured_at_utc"], "snapshot_captured_at_utc"
+        )
         initial_cutoff = _utc_datetime(target["feature_cutoff_utc"], "feature_cutoff_utc")
+        if snapshot_captured >= deadline:
+            raise FeatureBuildError("snapshot_captured_at_utc must be strictly before deadline_utc")
         if initial_cutoff >= deadline:
             raise FeatureBuildError("feature_cutoff_utc must be strictly before deadline_utc")
+        if initial_cutoff < snapshot_captured:
+            raise FeatureBuildError("feature_cutoff_utc cannot precede snapshot_captured_at_utc")
         if TARGET_COLUMNS.intersection(BASELINE_FEATURE_NAMES):  # defensive invariant
             raise FeatureBuildError("target columns must not occur in the feature contract")
 
@@ -235,6 +244,7 @@ class BaselineFeatureBuilder:
             "gameweek": _integer(target["gameweek"], "gameweek", minimum=1),
             "player_key": str(target["player_key"]),
             "deadline_utc": deadline,
+            "snapshot_captured_at_utc": snapshot_captured,
             "feature_cutoff_utc": final_cutoff,
             "feature_contract_version": self.contract.contract_version,
             "feature_source_artifact_ids": source_ids,
@@ -260,6 +270,7 @@ class BaselineFeatureBuilder:
         last_team = team_rows[-1] if team_rows else None
         status_state = target.get("status_value_state")
         status = target.get("status")
+        _validate_value_state(status, status_state, "status")
         status_risk = None
         if status_state not in {"source_unavailable", "acquisition_failure"} and status is not None:
             status_risk = _STATUS_RISK.get(str(status).casefold())
@@ -267,6 +278,7 @@ class BaselineFeatureBuilder:
                 raise FeatureBuildError(f"unknown FPL status code {status!r}")
         chance_state = target.get("chance_of_playing_value_state")
         chance = target.get("chance_of_playing_next_round")
+        _validate_value_state(chance, chance_state, "chance_of_playing_next_round")
         chance_value = None
         if chance_state not in {"source_unavailable", "acquisition_failure"} and chance is not None:
             chance_value = float(_number(chance, "chance_of_playing_next_round"))
@@ -640,6 +652,27 @@ def _nullable_number(value: Any) -> float | None:
     if value is None or (isinstance(value, Real) and math.isnan(float(value))):
         return None
     return float(_number(value, "numeric value"))
+
+
+def _validate_value_state(value: Any, state: Any, field: str) -> None:
+    missing_states = {"source_unavailable", "acquisition_failure"}
+    value_is_missing = value is None or (
+        isinstance(value, Real) and not isinstance(value, bool) and math.isnan(float(value))
+    )
+    if state in missing_states:
+        if not value_is_missing:
+            raise FeatureBuildError(f"field {field!r} must be missing when state is {state!r}")
+        return
+    if state == "genuine_zero":
+        if isinstance(value, bool) or not isinstance(value, Real) or float(value) != 0.0:
+            raise FeatureBuildError(f"field {field!r} must be numeric zero for genuine_zero")
+        return
+    if state != "value":
+        raise FeatureBuildError(f"field {field!r} has unknown value state {state!r}")
+    if value_is_missing:
+        raise FeatureBuildError(f"field {field!r} must not be missing when state is 'value'")
+    if isinstance(value, Real) and not isinstance(value, bool) and float(value) == 0.0:
+        raise FeatureBuildError(f"field {field!r} numeric zero must use genuine_zero")
 
 
 def _number(value: Any, field: str) -> float:

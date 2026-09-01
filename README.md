@@ -149,3 +149,23 @@ remain missing. No imputation, normalization, model training, or feature selecti
 this layer. `build_coverage_report(...)`, `write_coverage_report(...)`, and
 `write_spot_check_report(...)` retain the required per-season missingness and representative-player
 audit artifacts.
+
+## Leakage release gate
+
+Sprint 5 adds fail-fast point-in-time and fold-scope checks in
+`fpl_model.evaluation.leakage_check`, without starting the walk-forward evaluation harness:
+
+- feature and source-provenance timestamps must be strictly before each row's deadline;
+- target labels, unaggregated current-GW outcomes, duplicate canonical keys, and suspicious direct
+  target proxies are rejected from model feature lists;
+- DGW fixtures must share one deadline anchor and identical history-derived values;
+- training rows must be strictly earlier than test rows, with no later-season contamination;
+- learned preprocessing must retain fit-row keys and prove that they match the training fold only.
+
+The baseline feature frame now retains `snapshot_captured_at_utc` and validates it independently of
+`feature_cutoff_utc`. Snapshot status/chance value states are also checked so genuine numeric zero
+cannot be confused with source-unavailable or acquisition-failure missingness. Adversarial tests
+deliberately inject target-GW minutes, first-fixture DGW knowledge, test-period preprocessing rows,
+later-season rows, and a renamed perfect target proxy. A broad mutation test changes post-deadline
+labels, player outcomes, team outcomes, and provenance while requiring the pre-deadline feature
+frame to remain exactly identical.

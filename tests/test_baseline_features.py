@@ -37,6 +37,7 @@ def _target(
         "gameweek": 4,
         "player_key": player_key,
         "deadline_utc": DEADLINE,
+        "snapshot_captured_at_utc": DEADLINE - timedelta(hours=2),
         "feature_cutoff_utc": DEADLINE - timedelta(hours=1),
         "team_id_at_deadline": team,
         "position_at_deadline": "MID",
@@ -151,6 +152,7 @@ def test_machine_readable_contract_has_exactly_the_declared_46_features() -> Non
         all(value for value in definition.to_dict().values())
         for definition in BASELINE_FEATURE_CONTRACT.features
     )
+    assert "snapshot_captured_at_utc" in _build().columns
 
 
 def test_player_rolls_are_shifted_and_dgw_opponents_are_aggregated_once() -> None:
@@ -186,6 +188,32 @@ def test_understat_unresolved_is_missing_not_zero() -> None:
     assert row["goals_per90_last5"] > 0
 
 
+def test_genuine_zero_and_source_unavailable_remain_distinct() -> None:
+    missing = _target()
+    missing_frame = _build(targets=[missing])
+
+    genuine_zero = _target(status="d")
+    genuine_zero["chance_of_playing_next_round"] = 0
+    genuine_zero["chance_of_playing_value_state"] = "genuine_zero"
+    zero_history = _player_history()
+    for row in zero_history:
+        row.update(xg=0, xa=0, shots=0, key_passes=0)
+    zero_frame = _build(targets=[genuine_zero], player_history=zero_history)
+
+    assert pd.isna(missing_frame.iloc[0]["chance_of_playing"])
+    assert zero_frame.iloc[0]["chance_of_playing"] == 0.0
+    assert zero_frame.iloc[0]["xg_per90_last5"] == 0.0
+    assert zero_frame.iloc[0]["xa_per90_last5"] == 0.0
+
+
+def test_inconsistent_missing_value_state_fails_fast() -> None:
+    target = _target()
+    target["chance_of_playing_next_round"] = 0
+
+    with pytest.raises(FeatureBuildError, match="must be missing"):
+        _build(targets=[target])
+
+
 def test_target_and_post_deadline_rows_never_enter_a_player_window() -> None:
     history = _player_history()
     future = deepcopy(history[-1])
@@ -203,6 +231,81 @@ def test_target_and_post_deadline_rows_never_enter_a_player_window() -> None:
     assert_frame_equal(before, after, check_like=False)
 
 
+def test_mutating_all_post_deadline_information_cannot_change_feature_frame() -> None:
+    future_players: list[dict[str, object]] = []
+    for index in range(2):
+        row = deepcopy(_player_history()[-1])
+        row.update(
+            fixture_id=9900 + index,
+            kickoff_utc=DEADLINE + timedelta(days=index + 1),
+            completed_at_utc=DEADLINE + timedelta(days=index + 1, hours=3),
+            available_at_utc=DEADLINE + timedelta(days=index + 1, hours=4),
+            source_artifact_id=f"post-deadline-player-{index}",
+        )
+        future_players.append(row)
+    future_teams: list[dict[str, object]] = []
+    for team in (1, 2, 3):
+        future_teams.append(
+            {
+                "season": SEASON,
+                "fixture_id": 9800 + team,
+                "kickoff_utc": DEADLINE + timedelta(days=team),
+                "completed_at_utc": DEADLINE + timedelta(days=team, hours=3),
+                "available_at_utc": DEADLINE + timedelta(days=team, hours=4),
+                "team_id": team,
+                "opponent_team_id": 20,
+                "goals_for": 1,
+                "goals_against": 1,
+                "xg": 1.0,
+                "xga": 1.0,
+                "source_artifact_id": f"post-deadline-team-{team}",
+            }
+        )
+    before_target = _target()
+    before_target.update(actual_minutes_gw=30, actual_points_gw=2, y_minutes=30, y_points=2)
+    before = _build(
+        targets=[before_target],
+        player_history=[*_player_history(), *future_players],
+        team_history=[*_team_history(), *future_teams],
+    )
+
+    mutated_players = deepcopy(future_players)
+    for row in mutated_players:
+        row.update(
+            minutes=180,
+            total_points=999,
+            goals_scored=99,
+            assists=99,
+            starts=99,
+            bps=999,
+            bonus=99,
+            yellow_cards=99,
+            xg=999,
+            xa=999,
+            shots=999,
+            key_passes=999,
+            source_artifact_id="mutated-post-deadline-player",
+        )
+    mutated_teams = deepcopy(future_teams)
+    for row in mutated_teams:
+        row.update(
+            goals_for=99,
+            goals_against=88,
+            xg=77,
+            xga=66,
+            source_artifact_id="mutated-post-deadline-team",
+        )
+    after_target = deepcopy(before_target)
+    after_target.update(actual_minutes_gw=180, actual_points_gw=200, y_minutes=180, y_points=200)
+    after = _build(
+        targets=[after_target],
+        player_history=[*_player_history(), *mutated_players],
+        team_history=[*_team_history(), *mutated_teams],
+    )
+
+    assert_frame_equal(before, after, check_exact=True, check_like=False)
+
+
 def test_history_available_at_deadline_is_excluded_and_bad_context_fails() -> None:
     history = _player_history()
     history[-1]["available_at_utc"] = DEADLINE
@@ -213,6 +316,32 @@ def test_history_available_at_deadline_is_excluded_and_bad_context_fails() -> No
     contexts[1]["feature_cutoff_utc"] = DEADLINE
     with pytest.raises(FeatureBuildError, match="strictly pre-deadline"):
         _build(contexts=contexts)
+
+
+def test_post_deadline_snapshot_provenance_is_rejected_directly() -> None:
+    target = _target()
+    target["snapshot_captured_at_utc"] = DEADLINE
+
+    with pytest.raises(FeatureBuildError, match="snapshot_captured_at_utc"):
+        _build(targets=[target])
+
+
+def test_later_season_history_cannot_change_earlier_feature_frame() -> None:
+    later = deepcopy(_player_history()[-1])
+    later.update(
+        season="2027-28",
+        fixture_id=7777,
+        kickoff_utc=DEADLINE - timedelta(days=1),
+        completed_at_utc=DEADLINE - timedelta(hours=20),
+        available_at_utc=DEADLINE - timedelta(hours=19),
+        minutes=90,
+        total_points=999,
+    )
+
+    before = _build()
+    after = _build(player_history=[later, *_player_history()])
+
+    assert_frame_equal(before, after, check_exact=True, check_like=False)
 
 
 def test_representative_player_cases_and_reports_are_retained(tmp_path: object) -> None:
