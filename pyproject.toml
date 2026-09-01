@@ -26,6 +26,9 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"fpl_model.features" = ["*.json"]
+
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers -ra"
 testpaths = ["tests"]
@@ -42,4 +45,3 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
-

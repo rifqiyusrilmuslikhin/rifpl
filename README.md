@@ -121,5 +121,31 @@ fixture-schedule context before attaching completed outcomes:
 The fixture schedule input accepts canonical field names or FPL aliases, but additionally requires
 `season`, `available_at_utc`, and `source_artifact_id` so the schedule itself has point-in-time
 provenance. Fixture difficulty remains nullable and is aggregated only when all fixtures in the GW
-provide it. The 46-feature frame, model training, evaluation logic, and decision logic remain
-deferred to later sprints.
+provide it. Model training, evaluation logic, and decision logic remain deferred to later sprints.
+
+## Baseline feature contract
+
+Sprint 4 adds a fixed, machine-readable 46-feature contract and a causal feature builder. The
+contract is retained in `src/fpl_model/features/baseline_contract.json`; every feature declares its
+dtype, source, availability cutoff, window, aggregation, missing-data rule, and hypothesis.
+
+`BaselineFeatureBuilder.build(...)` consumes canonical player-GW rows and fixture contexts plus
+player-fixture and team-fixture history. It returns keys and provenance followed by exactly the 46
+contracted features. Player histories are filtered and sorted independently at every deadline
+before last-3/5/10 aggregation. Team and opponent histories use prior completed EPL fixtures only.
+All fixtures in a DGW must share one pre-deadline anchor, and opponent rates are averaged across
+the target fixtures.
+
+Player-history input supports the canonical fixture fields plus FPL statistics (`goals_scored`,
+`assists`, `starts`, `bps`, `bonus`, and `yellow_cards`) and nullable audited Understat fields (`xg`,
+`xa`, `shots`, and `key_passes`). Team history may be supplied either as one team-perspective row or
+as a home/away fixture row. If `completed_at_utc` is absent, completion is conservatively treated as
+three hours after kickoff; if `available_at_utc` is absent, it defaults to completion. Both must be
+strictly before the target deadline.
+
+Per-90 rates use summed window values and minutes, a fixed `1e-6` minute epsilon, and a 90-minute
+minimum. Partial rolling windows are allowed, but missing Understat values or unresolved mappings
+remain missing. No imputation, normalization, model training, or feature selection is performed in
+this layer. `build_coverage_report(...)`, `write_coverage_report(...)`, and
+`write_spot_check_report(...)` retain the required per-season missingness and representative-player
+audit artifacts.
