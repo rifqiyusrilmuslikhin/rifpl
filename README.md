@@ -85,5 +85,19 @@ Network calls are isolated in `fpl_model.data.acquisition`. Tests inject local f
 never require live network access. A live FPL endpoint smoke check is intentionally pending and is
 not part of the deterministic test suite.
 
-Feature engineering, snapshot selection, identity matching, model training, evaluation logic, and
+## Deadline snapshots and player identity
+
+Sprint 2 adds a strict point-in-time boundary and a versioned identity registry:
+
+- `DeadlineCalendar` stores canonical UTC deadlines and `SnapshotGate` accepts a bootstrap payload
+  only when its one `is_next` event is the target GW, its embedded deadline is canonical, and its
+  capture time is strictly pre-deadline;
+- selection operates only on already accepted snapshots, so a missing historical snapshot remains
+  missing instead of being backfilled from future data;
+- `PlayerIdentityRegistry` assigns one immutable internal key from stable cross-season `fpl_code`,
+  while retaining FPL element IDs as season aliases and team assignments as GW validity intervals;
+- Understat mappings remain nullable until explicitly audited. Name normalization creates candidate
+  proposals only, and reverse uniqueness prevents one external ID from attaching to two players.
+
+Canonical player-GW construction, feature engineering, model training, evaluation logic, and
 decision logic remain deferred to later sprints.

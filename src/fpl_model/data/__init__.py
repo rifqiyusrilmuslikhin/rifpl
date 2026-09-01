@@ -7,6 +7,17 @@ from fpl_model.data.acquisition import (
     HttpResponse,
     SourceSchemaError,
 )
+from fpl_model.data.identity import (
+    IdentityConflictError,
+    IdentityLookupError,
+    IdentityVersion,
+    MatchConfidence,
+    MatchMethod,
+    PlayerIdentityRegistry,
+    UnderstatMatchProposal,
+    normalize_player_name,
+    propose_understat_matches,
+)
 from fpl_model.data.manifest import (
     ArtifactIntegrityError,
     DatasetManifest,
@@ -23,6 +34,14 @@ from fpl_model.data.schemas import (
     SourcedValue,
     ValueState,
 )
+from fpl_model.data.snapshots import (
+    AcceptedSnapshot,
+    DeadlineCalendar,
+    DeadlineCalendarError,
+    GameweekDeadline,
+    SnapshotGate,
+    SnapshotRejectedError,
+)
 
 __all__ = [
     "CANONICAL_SCHEMAS",
@@ -31,15 +50,30 @@ __all__ = [
     "PLAYER_GAMEWEEK_MODEL_SCHEMA",
     "PLAYER_IDENTITY_REGISTRY_SCHEMA",
     "AcquisitionError",
+    "AcceptedSnapshot",
     "ArtifactIntegrityError",
     "CurrentSeasonFPLLoader",
+    "DeadlineCalendar",
+    "DeadlineCalendarError",
     "DatasetManifest",
     "HistoricalFPLLoader",
     "HttpResponse",
+    "GameweekDeadline",
+    "IdentityConflictError",
+    "IdentityLookupError",
+    "IdentityVersion",
+    "MatchConfidence",
+    "MatchMethod",
+    "PlayerIdentityRegistry",
     "RawArtifactStore",
     "SchemaValidationError",
+    "SnapshotGate",
+    "SnapshotRejectedError",
     "SourceSchemaError",
     "SourcedValue",
     "StoredArtifact",
+    "UnderstatMatchProposal",
     "ValueState",
+    "normalize_player_name",
+    "propose_understat_matches",
 ]

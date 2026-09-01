@@ -261,16 +261,24 @@ def _model_times(row: Mapping[str, Any], row_number: int) -> None:
 def _registry_record(row: Mapping[str, Any], row_number: int) -> None:
     if row["valid_to_gw"] is not None and row["valid_to_gw"] < row["valid_from_gw"]:
         raise SchemaValidationError(f"row {row_number} has an inverted validity interval")
-    if row["match_method"] == "manual" and not row["audit_note"]:
-        raise SchemaValidationError(f"row {row_number} manual matches require an audit_note")
-    if row["match_method"] == "unresolved" and row["confidence"] != "unresolved":
+    if row["match_method"] in {"manual", "audited_name_dob"} and not row["audit_note"]:
         raise SchemaValidationError(
-            f"row {row_number} unresolved matches require unresolved confidence"
+            f"row {row_number} {row['match_method']} matches require an audit_note"
+        )
+    is_unresolved = row["match_method"] == "unresolved"
+    if is_unresolved != (row["confidence"] == "unresolved"):
+        raise SchemaValidationError(
+            f"row {row_number} match_method and confidence must agree on unresolved state"
+        )
+    if is_unresolved != (row["understat_id"] is None):
+        raise SchemaValidationError(
+            f"row {row_number} unresolved mappings must have null understat_id and resolved "
+            "mappings must have an ID"
         )
 
 
 def _registry_intervals(rows: Sequence[Mapping[str, Any]]) -> None:
-    for source_field in ("fpl_element_id", "understat_id"):
+    for source_field in ("player_key", "fpl_element_id", "understat_id"):
         groups: dict[tuple[str, Any], list[Mapping[str, Any]]] = {}
         for row in rows:
             source_id = row[source_field]
@@ -285,6 +293,34 @@ def _registry_intervals(rows: Sequence[Mapping[str, Any]]) -> None:
                         f"player_identity_registry has overlapping {source_field} intervals "
                         f"for {source_key!r}"
                     )
+
+
+def _registry_identity_uniqueness(rows: Sequence[Mapping[str, Any]]) -> None:
+    code_to_keys: dict[int, set[str]] = {}
+    key_to_codes: dict[str, set[int]] = {}
+    alias_to_keys: dict[tuple[str, int], set[str]] = {}
+    understat_to_keys: dict[str, set[str]] = {}
+    for row in rows:
+        code_to_keys.setdefault(row["fpl_code"], set()).add(row["player_key"])
+        key_to_codes.setdefault(row["player_key"], set()).add(row["fpl_code"])
+        alias_to_keys.setdefault((row["season"], row["fpl_element_id"]), set()).add(
+            row["player_key"]
+        )
+        if row["understat_id"] is not None:
+            understat_to_keys.setdefault(row["understat_id"], set()).add(row["player_key"])
+
+    conflicts = (
+        ("fpl_code", code_to_keys),
+        ("player_key", key_to_codes),
+        ("season element alias", alias_to_keys),
+        ("Understat ID", understat_to_keys),
+    )
+    for label, assignments in conflicts:
+        for source_id, identities in assignments.items():
+            if len(identities) > 1:
+                raise SchemaValidationError(
+                    f"player_identity_registry {label} {source_id!r} maps to multiple identities"
+                )
 
 
 _VALUE_STATES = frozenset(state.value for state in ValueState)
@@ -419,7 +455,7 @@ PLAYER_IDENTITY_REGISTRY_SCHEMA = TableSchema(
         _positive_fields("fpl_code", "fpl_element_id", "valid_from_gw", "valid_to_gw", "team_id"),
         _registry_record,
     ),
-    dataset_validators=(_registry_intervals,),
+    dataset_validators=(_registry_intervals, _registry_identity_uniqueness),
 )
 
 CANONICAL_SCHEMAS = {
