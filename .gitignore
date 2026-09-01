@@ -1,0 +1,64 @@
+# Python bytecode and tooling caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local environment files
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Notebook state
+.ipynb_checkpoints/
+
+# Private planning and internal research documents
+/planning/
+/todo/
+
+# Raw and generated data are local and reproducible from manifests
+data/raw/**
+data/interim/**
+data/processed/**
+data/external/**
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# Caches, downloaded payloads, and model artifacts
+cache/
+.cache/
+artifacts/**
+/models/**
+!artifacts/.gitkeep
+
+# Generated research output; retain only reviewed files explicitly
+reports/**
+!reports/.gitkeep
+
+# Common secret and credential formats
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets*.json
+service-account*.json
+
+# Builds
+build/
+dist/

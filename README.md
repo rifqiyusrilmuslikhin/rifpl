@@ -1,0 +1,74 @@
+# FPL Model
+
+Python research scaffold for a Fantasy Premier League modeling project. Notebooks only orchestrate
+package code and display results.
+
+## Requirements
+
+- Python 3.12 (the development version is pinned in `.python-version`)
+- PowerShell 7 or Windows PowerShell
+- Git and VSCode with the Python extension (recommended)
+
+## Local setup (PowerShell / VSCode)
+
+From the repository root:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+In VSCode, run **Python: Select Interpreter** and choose `.venv\Scripts\python.exe`. Verify the
+environment with:
+
+```powershell
+python -m ruff format --check .
+python -m ruff check .
+python -m pytest
+python -c "import fpl_model; print(fpl_model.__version__)"
+```
+
+To apply formatting, run `python -m ruff format .`.
+
+## Configuration
+
+Project defaults live in `config/project.toml`. Paths are relative to the repository root unless
+an absolute path is supplied. `FPL_CONFIG` may point at an alternative TOML file:
+
+```powershell
+$env:FPL_CONFIG = "config/project.toml"
+python -c "from fpl_model.config import load_config; print(load_config())"
+```
+
+The canonical timezone is UTC. Timestamps used by future pipeline stages must be timezone-aware
+and normalized to UTC before storage or comparison.
+
+## Google Colab
+
+Clone or upload this repository, change into its root, then open
+`notebooks/00_colab_smoke_test.ipynb`. Its first cell installs the editable package and pinned
+development dependencies; its second cell runs the same import smoke test used locally. Restart
+the Colab runtime if pip reports that an already-imported dependency changed.
+
+The notebook intentionally contains no acquisition, transformation, feature, or model logic.
+
+## Repository layout
+
+```text
+config/                 project defaults (season, UTC, paths)
+notebooks/              thin experiment orchestration
+src/fpl_model/data/     data-layer modules
+src/fpl_model/features/ feature-layer modules
+src/fpl_model/models/   modeling modules
+src/fpl_model/evaluation/ evaluation modules
+src/fpl_model/decision/ decision-layer modules
+tests/                  unit and smoke tests
+data/                   ignored local data tiers
+artifacts/              ignored model artifacts
+reports/                ignored generated metrics and predictions
+```
+
+Sprint 0 contains scaffold and configuration only. Data ingestion, feature engineering, model
+training, evaluation logic, and decision logic are intentionally deferred.

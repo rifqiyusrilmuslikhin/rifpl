@@ -1,0 +1,15 @@
+[project]
+name = "fpl-model"
+target_season = "2026-27"
+timezone = "UTC"
+
+[paths]
+data_root = "data"
+raw = "data/raw"
+interim = "data/interim"
+processed = "data/processed"
+external = "data/external"
+cache = "cache"
+artifacts = "artifacts"
+reports = "reports"
+
