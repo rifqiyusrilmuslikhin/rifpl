@@ -7,6 +7,15 @@ from fpl_model.data.acquisition import (
     HttpResponse,
     SourceSchemaError,
 )
+from fpl_model.data.canonical import (
+    CanonicalDataset,
+    CanonicalDatasetBuilder,
+    CanonicalDatasetError,
+    DGWAnchorError,
+    ReconciliationError,
+    ReconciliationReport,
+    validate_dgw_anchors,
+)
 from fpl_model.data.identity import (
     IdentityConflictError,
     IdentityLookupError,
@@ -45,6 +54,9 @@ from fpl_model.data.snapshots import (
 
 __all__ = [
     "CANONICAL_SCHEMAS",
+    "CanonicalDataset",
+    "CanonicalDatasetBuilder",
+    "CanonicalDatasetError",
     "DEADLINE_SNAPSHOT_SCHEMA",
     "PLAYER_FIXTURE_FACT_SCHEMA",
     "PLAYER_GAMEWEEK_MODEL_SCHEMA",
@@ -55,6 +67,7 @@ __all__ = [
     "CurrentSeasonFPLLoader",
     "DeadlineCalendar",
     "DeadlineCalendarError",
+    "DGWAnchorError",
     "DatasetManifest",
     "HistoricalFPLLoader",
     "HttpResponse",
@@ -66,6 +79,8 @@ __all__ = [
     "MatchMethod",
     "PlayerIdentityRegistry",
     "RawArtifactStore",
+    "ReconciliationError",
+    "ReconciliationReport",
     "SchemaValidationError",
     "SnapshotGate",
     "SnapshotRejectedError",
@@ -76,4 +91,5 @@ __all__ = [
     "ValueState",
     "normalize_player_name",
     "propose_understat_matches",
+    "validate_dgw_anchors",
 ]

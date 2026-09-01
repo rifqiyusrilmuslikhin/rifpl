@@ -177,6 +177,10 @@ class PlayerIdentityRegistry:
     def team_at(self, *, player_key: str, season: str, gameweek: int) -> int:
         return self._version_at(player_key, season, gameweek).team_id
 
+    def identity_at(self, *, player_key: str, season: str, gameweek: int) -> IdentityVersion:
+        """Return the one audited identity version valid for a player-gameweek."""
+        return self._version_at(player_key, season, gameweek)
+
     def understat_id_at(self, *, player_key: str, season: str, gameweek: int) -> str | None:
         return self._version_at(player_key, season, gameweek).understat_id
 

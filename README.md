@@ -99,5 +99,27 @@ Sprint 2 adds a strict point-in-time boundary and a versioned identity registry:
 - Understat mappings remain nullable until explicitly audited. Name normalization creates candidate
   proposals only, and reverse uniqueness prevents one external ID from attaching to two players.
 
-Canonical player-GW construction, feature engineering, model training, evaluation logic, and
-decision logic remain deferred to later sprints.
+## Canonical fixture and player-GW dataset
+
+Sprint 3 adds `CanonicalDatasetBuilder`, which deliberately freezes accepted deadline-snapshot and
+fixture-schedule context before attaching completed outcomes:
+
+- `player_fixture_fact` preserves one raw outcome per player and EPL fixture, with the player's team
+  resolved from the identity interval valid for that fixture's GW and the opponent derived from the
+  canonical schedule;
+- pre-deadline fixture context requires an explicit `available_at_utc < deadline_utc` and gives every
+  fixture in a player-DGW the same `feature_cutoff_utc` and `context_anchor_id`;
+- `player_gameweek_model` has exactly one `(season, gameweek, player_key)` row, sums DGW points and
+  minutes, and derives the participation/points labels only after context is frozen;
+- the decision dataset retains every player in the accepted snapshot. A player with no scheduled
+  fixture is an explicit blank row with `fixture_count=0`, `is_blank=true`, and zero outcome targets.
+  Later ranking-training code may exclude blanks, but it must filter this flag consistently for every
+  model and evaluation window;
+- `ReconciliationReport` fails construction on duplicate/lost rows or mismatched per-player and
+  global totals, and can retain the passing result with `write_json(...)`.
+
+The fixture schedule input accepts canonical field names or FPL aliases, but additionally requires
+`season`, `available_at_utc`, and `source_artifact_id` so the schedule itself has point-in-time
+provenance. Fixture difficulty remains nullable and is aggregated only when all fixtures in the GW
+provide it. The 46-feature frame, model training, evaluation logic, and decision logic remain
+deferred to later sprints.

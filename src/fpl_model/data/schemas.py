@@ -244,6 +244,13 @@ def _snapshot_value_states(row: Mapping[str, Any], row_number: int) -> None:
             )
 
 
+def _fixture_outcome(row: Mapping[str, Any], row_number: int) -> None:
+    if row["minutes"] > 90:
+        raise SchemaValidationError(
+            f"row {row_number} fixture minutes cannot exceed the EPL fixture maximum of 90"
+        )
+
+
 def _model_times(row: Mapping[str, Any], row_number: int) -> None:
     deadline = row["deadline_utc"]
     if row["snapshot_captured_at_utc"] >= deadline:
@@ -256,6 +263,57 @@ def _model_times(row: Mapping[str, Any], row_number: int) -> None:
         )
     if row["is_blank"] != (row["fixture_count"] == 0):
         raise SchemaValidationError(f"row {row_number} is_blank must agree with fixture_count")
+    if len(row["fixture_ids"]) != row["fixture_count"]:
+        raise SchemaValidationError(
+            f"row {row_number} fixture_ids must contain exactly fixture_count entries"
+        )
+    if len(set(row["fixture_ids"])) != len(row["fixture_ids"]):
+        raise SchemaValidationError(f"row {row_number} fixture_ids must be unique")
+
+    target_fields = {
+        "actual_points_gw",
+        "actual_minutes_gw",
+        "y_play_any",
+        "y_minutes_60",
+        "y_minutes",
+        "y_points",
+        "y_points_if_play",
+        "y_haul_5",
+        "y_haul_10",
+    }
+    present = target_fields.intersection(row)
+    if present and present != target_fields:
+        missing = sorted(target_fields.difference(row))
+        raise SchemaValidationError(
+            f"row {row_number} has a partial target set; missing {missing!r}"
+        )
+    if not present:
+        return
+
+    points = row["actual_points_gw"]
+    minutes = row["actual_minutes_gw"]
+    if not isinstance(points, Integral) or isinstance(points, bool):
+        raise SchemaValidationError(f"row {row_number} actual_points_gw must be an integer")
+    if not isinstance(minutes, Integral) or isinstance(minutes, bool) or minutes < 0:
+        raise SchemaValidationError(
+            f"row {row_number} actual_minutes_gw must be a non-negative integer"
+        )
+    expected = {
+        "y_play_any": int(minutes > 0),
+        "y_minutes_60": int(minutes >= 60),
+        "y_minutes": minutes,
+        "y_points": points,
+        "y_points_if_play": points if minutes > 0 else None,
+        "y_haul_5": int(points >= 5),
+        "y_haul_10": int(points >= 10),
+    }
+    for field, expected_value in expected.items():
+        if row[field] != expected_value:
+            raise SchemaValidationError(
+                f"row {row_number} field {field!r} does not agree with GW outcomes"
+            )
+    if row["is_blank"] and (points != 0 or minutes != 0):
+        raise SchemaValidationError(f"row {row_number} blank GW targets must be zero")
 
 
 def _registry_record(row: Mapping[str, Any], row_number: int) -> None:
@@ -327,7 +385,7 @@ _VALUE_STATES = frozenset(state.value for state in ValueState)
 
 PLAYER_FIXTURE_FACT_SCHEMA = TableSchema(
     name="player_fixture_fact",
-    version="1.0.0",
+    version="1.1.0",
     fields=(
         FieldSpec("season", FieldKind.STRING),
         FieldSpec("fixture_id", FieldKind.INTEGER),
@@ -356,6 +414,7 @@ PLAYER_FIXTURE_FACT_SCHEMA = TableSchema(
             "minutes",
             "source_row_number",
         ),
+        _fixture_outcome,
     ),
 )
 
@@ -398,7 +457,7 @@ DEADLINE_SNAPSHOT_SCHEMA = TableSchema(
 
 PLAYER_GAMEWEEK_MODEL_SCHEMA = TableSchema(
     name="player_gameweek_model",
-    version="1.0.0",
+    version="1.1.0",
     fields=(
         FieldSpec("season", FieldKind.STRING),
         FieldSpec("gameweek", FieldKind.INTEGER),
