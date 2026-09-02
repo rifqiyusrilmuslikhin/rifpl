@@ -1,5 +1,33 @@
-"""Walk-forward evaluation, metrics, and leakage-check boundaries."""
+"""Walk-forward evaluation, metrics, retained predictions, and leakage boundaries."""
 
+from fpl_model.evaluation.artifacts import (
+    PredictionArtifactError,
+    RetainedPredictions,
+    retained_predictions,
+)
+from fpl_model.evaluation.cohorts import (
+    Cohort,
+    CohortError,
+    cohort_frame,
+    diagnostic_cohorts,
+    evaluate_probability_cohorts,
+    evaluate_ranking_cohorts,
+)
+from fpl_model.evaluation.comparison import (
+    PairedMetricComparison,
+    PairingError,
+    assert_exact_same_rows,
+    bootstrap_gameweek_deltas,
+    compare_metric_reports,
+    compare_ranking_predictions,
+    summarize_seed_metrics,
+)
+from fpl_model.evaluation.harness import (
+    FoldPredictor,
+    WalkForwardHarness,
+    regenerate_probability_report,
+    regenerate_ranking_report,
+)
 from fpl_model.evaluation.leakage_check import (
     CANONICAL_KEY_COLUMNS,
     CURRENT_GAMEWEEK_RAW_COLUMNS,
@@ -15,19 +43,77 @@ from fpl_model.evaluation.leakage_check import (
     audit_feature_frame,
     find_suspicious_raw_features,
 )
+from fpl_model.evaluation.metrics import (
+    MetricInputError,
+    MetricReport,
+    ProbabilityReport,
+    calibration_intercept_slope,
+    calibration_table,
+    monotonicity_violation_rate,
+    probability_metrics_by_gameweek,
+    ranking_metrics_by_gameweek,
+)
+from fpl_model.evaluation.windows import (
+    DEFAULT_EVALUATION_CONFIG,
+    EvaluationConfigError,
+    EvaluationPlan,
+    EvaluationWindow,
+    ExpandingWindowSplitter,
+    Period,
+    WalkForwardFold,
+    WindowRole,
+    load_evaluation_plan,
+)
 
 __all__ = [
     "CANONICAL_KEY_COLUMNS",
+    "DEFAULT_EVALUATION_CONFIG",
     "CURRENT_GAMEWEEK_RAW_COLUMNS",
+    "Cohort",
+    "CohortError",
+    "EvaluationConfigError",
+    "EvaluationPlan",
+    "EvaluationWindow",
+    "ExpandingWindowSplitter",
+    "FoldPredictor",
     "TARGET_COLUMNS",
     "LeakageError",
+    "MetricInputError",
+    "MetricReport",
+    "PairedMetricComparison",
+    "PairingError",
+    "Period",
+    "PredictionArtifactError",
+    "ProbabilityReport",
+    "RetainedPredictions",
     "SuspiciousCorrelation",
+    "WalkForwardFold",
+    "WalkForwardHarness",
+    "WindowRole",
     "assert_chronological_fold",
     "assert_dgw_deadline_anchoring",
+    "assert_exact_same_rows",
     "assert_feature_columns_safe",
     "assert_feature_timestamps_predeadline",
     "assert_fold_local_fit",
     "assert_no_suspicious_raw_features",
     "audit_feature_frame",
+    "bootstrap_gameweek_deltas",
+    "calibration_intercept_slope",
+    "calibration_table",
+    "cohort_frame",
+    "compare_metric_reports",
+    "compare_ranking_predictions",
+    "diagnostic_cohorts",
+    "evaluate_probability_cohorts",
+    "evaluate_ranking_cohorts",
     "find_suspicious_raw_features",
+    "load_evaluation_plan",
+    "monotonicity_violation_rate",
+    "probability_metrics_by_gameweek",
+    "ranking_metrics_by_gameweek",
+    "regenerate_probability_report",
+    "regenerate_ranking_report",
+    "retained_predictions",
+    "summarize_seed_metrics",
 ]

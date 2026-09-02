@@ -169,3 +169,25 @@ deliberately inject target-GW minutes, first-fixture DGW knowledge, test-period 
 later-season rows, and a renamed perfect target proxy. A broad mutation test changes post-deadline
 labels, player outcomes, team outcomes, and provenance while requiring the pre-deadline feature
 frame to remain exactly identical.
+
+## Walk-forward evaluation
+
+Sprint 6 adds the model-agnostic evaluation harness in `fpl_model.evaluation`:
+
+- `config/evaluation_windows.toml` freezes warm-up, discovery, calibration, confirmation, and
+  2026-27 prospective boundaries. Only discovery windows carry selection permission;
+- `ExpandingWindowSplitter` uses a distinct immediately preceding calibration block and constructs
+  training data only from earlier configured windows, dropping locally present future seasons;
+- ranking and error metrics are computed inside each `(season, gameweek)` before their unweighted
+  mean is reported. Duplicate player-GW rows are rejected so a canonical DGW row is scored once;
+- probability reports include Brier score, log loss, ROC-AUC, PR-AUC, reliability bins,
+  calibration intercept/slope, ECE, and per-GW top-k precision/lift/recall diagnostics;
+- required eligibility, participation, position, SGW/DGW, season-phase, and availability cohorts
+  are formed after prediction. The outcome-derived played and 60+ cohorts are explicitly marked
+  diagnostic-only;
+- paired comparisons require identical canonical rows, targets, eligibility, and GWs. Confidence
+  intervals resample whole GWs rather than player rows;
+- `WalkForwardHarness` passes target-free test inputs to predictors and verifies their retained
+  fit-row provenance. Its immutable Parquet artifact retains keys, fold, seed, eligibility,
+  targets, predictions, and baseline columns with a SHA-256 metadata sidecar, allowing reports to
+  be regenerated without fitting again.

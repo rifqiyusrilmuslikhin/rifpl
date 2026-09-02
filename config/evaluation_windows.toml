@@ -1,0 +1,89 @@
+version = "1.0.0"
+key_columns = ["season", "gameweek", "player_key"]
+
+# These boundaries are deliberately immutable research policy. Discovery may be used for model
+# choice; confirmation and prospective results may only be opened after that choice is frozen.
+[[windows]]
+name = "warmup_history"
+role = "warmup"
+start_season = "2021-22"
+start_gameweek = 1
+end_season = "2023-24"
+end_gameweek = 38
+selection_allowed = false
+
+[[windows]]
+name = "discovery_calibration_1"
+role = "calibration"
+start_season = "2024-25"
+start_gameweek = 1
+end_season = "2024-25"
+end_gameweek = 6
+selection_allowed = false
+
+[[windows]]
+name = "discovery_1"
+role = "discovery"
+start_season = "2024-25"
+start_gameweek = 7
+end_season = "2024-25"
+end_gameweek = 14
+calibration_window = "discovery_calibration_1"
+selection_allowed = true
+
+[[windows]]
+name = "discovery_calibration_2"
+role = "calibration"
+start_season = "2024-25"
+start_gameweek = 15
+end_season = "2024-25"
+end_gameweek = 20
+selection_allowed = false
+
+[[windows]]
+name = "discovery_2"
+role = "discovery"
+start_season = "2024-25"
+start_gameweek = 21
+end_season = "2024-25"
+end_gameweek = 28
+calibration_window = "discovery_calibration_2"
+selection_allowed = true
+
+[[windows]]
+name = "confirmation_calibration"
+role = "calibration"
+start_season = "2024-25"
+start_gameweek = 29
+end_season = "2024-25"
+end_gameweek = 38
+selection_allowed = false
+
+[[windows]]
+name = "confirmation"
+role = "confirmation"
+start_season = "2025-26"
+start_gameweek = 1
+end_season = "2025-26"
+end_gameweek = 12
+calibration_window = "confirmation_calibration"
+selection_allowed = false
+
+[[windows]]
+name = "prospective_calibration"
+role = "calibration"
+start_season = "2025-26"
+start_gameweek = 13
+end_season = "2025-26"
+end_gameweek = 38
+selection_allowed = false
+
+[[windows]]
+name = "prospective_2026_27"
+role = "prospective"
+start_season = "2026-27"
+start_gameweek = 1
+end_season = "2026-27"
+end_gameweek = 38
+calibration_window = "prospective_calibration"
+selection_allowed = false
