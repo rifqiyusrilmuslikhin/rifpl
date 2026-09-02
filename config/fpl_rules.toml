@@ -1,0 +1,30 @@
+[rules]
+version = "2026-27-v1"
+verified_on = "2026-09-02"
+source_url = "https://www.premierleague.com/en/news/2174899/fpl-basics-managing-your-team"
+squad_size = 15
+starting_size = 11
+max_players_per_club = 3
+
+[rules.squad]
+GKP = 2
+DEF = 5
+MID = 5
+FWD = 3
+
+[rules.starting_min]
+GKP = 1
+DEF = 3
+MID = 2
+FWD = 1
+
+[rules.starting_max]
+GKP = 1
+DEF = 5
+MID = 5
+FWD = 3
+
+[risk]
+low_play_any = 0.50
+low_minutes_60 = 0.50
+low_expected_minutes = 30.0

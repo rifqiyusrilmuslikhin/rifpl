@@ -254,3 +254,26 @@ loss/reliability evidence against historical-rate baselines, minutes errors, req
 diagnostics, coherence violations before and after reconciliation, blend weights, seed noise, and
 GW-bootstrap direct/conditional/blend comparisons. Candidate selection uses discovery only; the
 selected decomposition is promoted only if its guarded result repeats on untouched confirmation.
+
+## Decision engine
+
+Sprint 10 adds a deterministic one-GW layer in `fpl_model.decision`. The official public Team ID
+endpoint is isolated behind `PublicTeamLoader`; malformed, incomplete, or duplicate pick payloads
+fail before a decision is attempted. `config/fpl_rules.toml` captures the verified 2026-27 squad,
+club-limit, Starting XI, and risk-threshold rules with an official source and verification date.
+
+Map the promoted artifact explicitly with `PredictionColumns`, then call `make_decision(...)`.
+The engine validates the 2/5/5/3 squad and three-per-club limit, maximises champion xPts over all
+legal formations, ranks outfield substitutes by `xPts * P(play_any)`, and reserves bench slot four
+for the goalkeeper. Captain is the highest-xPts starter; vice-captain maximises expected coverage
+conditional on the captain not playing. Canonical player keys break every tie, so shuffled input
+produces the same output. Each row retains xPts, participation probabilities, expected minutes,
+quality/risk flags, and a factual decision reason. The report trace records Team payload hash,
+rules version/source, deadline snapshot artifact, model artifact, and selected xPts column.
+
+`decision_regret_backtest(...)` consumes retained predictions only. For each complete historical
+squad/GW it reports legal-XI regret against hindsight, captain regret, simulated autosub and bench
+order regret, vice coverage, total decision points, and exact champion-minus-baseline paired
+deltas. `write_decision_report(...)` and `write_regret_report(...)` refuse to overwrite frozen
+JSON evidence. `notebooks/10_decision_engine_report.ipynb` is a thin orchestration example and
+contains no decision logic.
