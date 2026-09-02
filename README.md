@@ -232,3 +232,25 @@ OOF rows.
 paired deltas, `ep_next` coverage, seed noise, and discovery/confirmation promotion gates entirely
 from retained predictions. The gate retains Last-5 unless NDCG improvement exceeds measured seed
 movement and Spearman, MAE, and absolute-bias guardrails also hold on confirmation.
+
+## Participation-aware models
+
+Sprint 9 adds independent `XGBClassifier(binary:logistic)` heads for `P(play_any)` and `P(60+)`.
+Each classifier and its preprocessing are fitted only on the training partition; a sigmoid/Platt
+calibrator is then fitted on the disjoint, immediately preceding chronological calibration block.
+Both raw and calibrated probabilities are retained. Final outputs reconcile `P(60+) <=
+P(play_any)`, including deterministic zero participation for confirmed blanks.
+
+Conditional XGBoost minutes and points heads are fitted only on played training rows. Expected
+minutes combine calibrated participation with conditional minutes and enforce both `60 * P(60+)`
+and `90 * fixture_count * P(play_any)` bounds. Conditional xPts is `P(play_any) * E(points|play)`;
+a convex direct/conditional blend chooses its direct weight on the calibration block using a fixed
+0.05 grid, GW-first NDCG@10, and an MAE tie-break. No fitted head is used as an in-sample feature
+for another head.
+
+`run_participation_models(...)` runs seeds `42`, `7`, and `2026`, retaining seed-level and
+arithmetic-mean ensemble predictions. `regenerate_participation_report(...)` rebuilds Brier/log
+loss/reliability evidence against historical-rate baselines, minutes errors, required cohort
+diagnostics, coherence violations before and after reconciliation, blend weights, seed noise, and
+GW-bootstrap direct/conditional/blend comparisons. Candidate selection uses discovery only; the
+selected decomposition is promoted only if its guarded result repeats on untouched confirmation.
