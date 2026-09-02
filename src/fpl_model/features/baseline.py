@@ -21,6 +21,11 @@ PROVENANCE_COLUMNS = (
     "feature_contract_version",
     "feature_source_artifact_ids",
 )
+BASELINE_INPUT_COLUMNS = (
+    "points_last_appearance",
+    "ep_next",
+    "ep_next_value_state",
+)
 TARGET_COLUMNS = frozenset(
     {
         "actual_points_gw",
@@ -100,7 +105,12 @@ class BaselineFeatureBuilder:
                     teams_by_key,
                 )
             )
-        columns = [*KEY_COLUMNS, *PROVENANCE_COLUMNS, *BASELINE_FEATURE_NAMES]
+        columns = [
+            *KEY_COLUMNS,
+            *PROVENANCE_COLUMNS,
+            *BASELINE_INPUT_COLUMNS,
+            *BASELINE_FEATURE_NAMES,
+        ]
         frame = pd.DataFrame.from_records(records, columns=columns)
         for definition in self.contract.features:
             if definition.dtype == "category":
@@ -248,6 +258,17 @@ class BaselineFeatureBuilder:
             "feature_cutoff_utc": final_cutoff,
             "feature_contract_version": self.contract.contract_version,
             "feature_source_artifact_ids": source_ids,
+            "points_last_appearance": (
+                float(_number(appearances[-1]["total_points"], "total_points"))
+                if (
+                    appearances := [
+                        row for row in eligible_players if _number(row["minutes"], "minutes") > 0
+                    ]
+                )
+                else None
+            ),
+            "ep_next": _accepted_ep_next(target),
+            "ep_next_value_state": target.get("ep_next_value_state", "source_unavailable"),
             **feature_values,
         }
 
@@ -673,6 +694,16 @@ def _validate_value_state(value: Any, state: Any, field: str) -> None:
         raise FeatureBuildError(f"field {field!r} must not be missing when state is 'value'")
     if isinstance(value, Real) and not isinstance(value, bool) and float(value) == 0.0:
         raise FeatureBuildError(f"field {field!r} numeric zero must use genuine_zero")
+
+
+def _accepted_ep_next(target: Mapping[str, Any]) -> float | None:
+    """Keep official xPts nullable while enforcing its accepted snapshot value state."""
+    value = target.get("ep_next")
+    state = target.get("ep_next_value_state", "source_unavailable")
+    _validate_value_state(value, state, "ep_next")
+    if state in {"source_unavailable", "acquisition_failure"}:
+        return None
+    return float(_number(value, "ep_next"))
 
 
 def _number(value: Any, field: str) -> float:

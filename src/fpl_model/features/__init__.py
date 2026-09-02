@@ -1,6 +1,10 @@
 """Point-in-time feature contracts and gameweek aggregation boundaries."""
 
-from fpl_model.features.baseline import BaselineFeatureBuilder, FeatureBuildError
+from fpl_model.features.baseline import (
+    BASELINE_INPUT_COLUMNS,
+    BaselineFeatureBuilder,
+    FeatureBuildError,
+)
 from fpl_model.features.contract import (
     BASELINE_FEATURE_CONTRACT,
     BASELINE_FEATURE_NAMES,
@@ -19,6 +23,7 @@ from fpl_model.features.reporting import (
 __all__ = [
     "BASELINE_FEATURE_CONTRACT",
     "BASELINE_FEATURE_NAMES",
+    "BASELINE_INPUT_COLUMNS",
     "REQUIRED_SPOT_CHECK_CASES",
     "BaselineFeatureBuilder",
     "FeatureBuildError",

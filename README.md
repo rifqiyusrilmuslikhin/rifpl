@@ -191,3 +191,24 @@ Sprint 6 adds the model-agnostic evaluation harness in `fpl_model.evaluation`:
   fit-row provenance. Its immutable Parquet artifact retains keys, fold, seed, eligibility,
   targets, predictions, and baseline columns with a SHA-256 metadata sidecar, allowing reports to
   be regenerated without fitting again.
+
+## Simple baselines
+
+Sprint 7 adds one fold-local baseline runner in `fpl_model.models`. It sends always-zero,
+last-appearance, Last-5, position-by-recent-minutes, price ranking, historical participation and
+minutes, Logistic Regression, and Ridge predictions through the Sprint 6 walk-forward harness.
+Categorical encoding, numeric imputation, and scaling are fitted separately inside every training
+fold. Ridge retains raw diagnostics and clipped inference outputs; price is reported only with
+ranking metrics.
+
+The feature builder now retains `points_last_appearance` and the nullable official `ep_next` as
+baseline inputs outside the fixed 46-feature contract. Official xPts is accepted only when its
+value state agrees with a strictly pre-deadline snapshot, remains missing when unavailable, and is
+reported with per-season coverage plus a same-row Last-5 comparator. Historical cold-start
+fallbacks retain explicit availability indicators in the OOF artifact.
+
+`run_simple_baselines(...)` returns the same immutable `RetainedPredictions` artifact used by the
+evaluation harness. `regenerate_baseline_report(...)` reconstructs points/ranking metrics,
+minutes errors, Brier/log-loss/AUC results, reliability bins, coverage, sanity checks, and a
+Sprint 8 stop/go recommendation without retraining. `FrozenBaselineReport.write_json(...)`
+refuses to overwrite a previously frozen report.
