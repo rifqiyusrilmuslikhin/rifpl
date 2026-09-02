@@ -212,3 +212,23 @@ evaluation harness. `regenerate_baseline_report(...)` reconstructs points/rankin
 minutes errors, Brier/log-loss/AUC results, reliability bins, coverage, sanity checks, and a
 Sprint 8 stop/go recommendation without retraining. `FrozenBaselineReport.write_json(...)`
 refuses to overwrite a previously frozen report.
+
+## Direct xPts
+
+Sprint 8 adds a fixed `XGBRegressor` candidate with `reg:squarederror`, MAE evaluation, histogram
+trees, and the predeclared conservative 600-tree configuration. Every walk-forward fold fits its
+numeric/categorical imputation and one-hot encoding on training rows only. The immediately
+preceding chronological calibration block is transformed with that fitted preprocessor and is the
+sole early-stopping set.
+
+`run_direct_xpts(...)` always runs seeds `42`, `7`, and `2026`. It retains every raw and
+non-negative-clipped seed prediction, early-stopping diagnostics, and the arithmetic-mean raw and
+clipped ensemble. The primary model always uses the frozen 46 features; when valid pre-deadline
+`ep_next` values exist, a named `with_ep_next` arm is added while the independent 46-feature arm
+remains present. Last-5, Ridge, price, and nullable official `ep_next` comparators share the exact
+OOF rows.
+
+`regenerate_direct_xpts_report(...)` rebuilds individual/ensemble GW-first metrics, GW-bootstrap
+paired deltas, `ep_next` coverage, seed noise, and discovery/confirmation promotion gates entirely
+from retained predictions. The gate retains Last-5 unless NDCG improvement exceeds measured seed
+movement and Spearman, MAE, and absolute-bias guardrails also hold on confirmation.
