@@ -277,3 +277,42 @@ order regret, vice coverage, total decision points, and exact champion-minus-bas
 deltas. `write_decision_report(...)` and `write_regret_report(...)` refuse to overwrite frozen
 JSON evidence. `notebooks/10_decision_engine_report.ipynb` is a thin orchestration example and
 contains no decision logic.
+
+## Champion stabilization
+
+Sprint 11 adds a fail-closed stabilization protocol around the Sprint 9 finalist. The complete
+experiment surface is checked into `config/champion_stabilization.toml`: five fixed seeds, an
+FPL-only versus FPL+Understat source arm, six hypothesis groups, and a three-entry conservative
+hyperparameter grid. The Understat group is the source arm itself and is trained only once, so the
+study contains nine distinct configurations rather than a duplicate ablation.
+
+`run_champion_discovery(...)` accepts a `FinalistDeclaration` traced to a retained earlier report
+and refuses any evaluation window that is not marked `selection_allowed`. It runs every
+predeclared arm on the two discovery blocks and retains seed-level plus arithmetic-mean ensemble
+predictions. `regenerate_champion_discovery_report(...)` reports:
+
+- individual and ensemble GW-first metrics for all five seeds;
+- seed standard deviation and maximum pairwise movement;
+- FPL-only versus FPL+Understat on identical full operational rows and on identical rows with
+  complete audited Understat inputs, including coverage;
+- grouped-ablation and small-grid results with GW-bootstrap confidence intervals;
+- participation calibration versus historical-rate baselines; and
+- every rejected or inconclusive result with a reason.
+
+`freeze_champion_selection(...)` seals the discovery report, selected feature list,
+hyperparameters, seed list, window policy, and prior-finalist evidence into a SHA-256-protected
+`SelectionFreeze`. `run_untouched_confirmation(...)` accepts only that one freeze and refuses to
+replace a retained confirmation artifact. It has no API for comparing alternatives on the
+confirmation window.
+
+After confirmation, `regenerate_champion_promotion_report(...)` audits the Git revision, data
+manifest hashes carried forward from discovery, feature contract, fold configuration, retained
+prediction checksum, finalist report, model artifact, exact Python/package environment,
+calibration, seed noise, guardrails, and paired-GW confidence interval. Missing evidence yields
+`DO_NOT_PROMOTE`. Only a fully passing report can be handed to `pin_champion_bundle(...)`, which
+creates an immutable directory containing the model, confirmation predictions, selection seal,
+promotion report, exact environment lock, source policies, and a checksum manifest.
+
+The thin `notebooks/11_champion_stabilization.ipynb` shows the intended two-stage orchestration.
+This repository intentionally contains no historical processed frame or retained experiment
+report, so it does not claim or pin a real champion until those local evidence inputs are supplied.

@@ -162,6 +162,7 @@ class ParticipationAwarePredictor:
         *,
         seed: int,
         config: ParticipationConfig | None = None,
+        expected_feature_columns: Sequence[str] = BASELINE_FEATURE_NAMES,
         classifier_factory: Callable[..., Any] = XGBClassifier,
         regressor_factory: Callable[..., Any] = XGBRegressor,
     ) -> None:
@@ -169,6 +170,15 @@ class ParticipationAwarePredictor:
             raise ValueError("seed must be an integer")
         self.seed = seed
         self.config = config or ParticipationConfig()
+        self.expected_feature_columns = tuple(expected_feature_columns)
+        if (
+            not self.expected_feature_columns
+            or len(self.expected_feature_columns) != len(set(self.expected_feature_columns))
+            or not set(self.expected_feature_columns).issubset(BASELINE_FEATURE_NAMES)
+        ):
+            raise ParticipationInputError(
+                "expected features must be a non-empty unique subset of the baseline contract"
+            )
         self.classifier_factory = classifier_factory
         self.regressor_factory = regressor_factory
         self.fitted_row_keys: list[tuple[object, ...]] = []
@@ -189,9 +199,9 @@ class ParticipationAwarePredictor:
         target_columns: tuple[str, ...],
     ) -> None:
         self.feature_columns = tuple(feature_columns)
-        if self.feature_columns != BASELINE_FEATURE_NAMES:
+        if self.feature_columns != self.expected_feature_columns:
             raise ParticipationInputError(
-                "participation models require the ordered frozen 46-feature contract"
+                "participation model features differ from the predeclared arm contract"
             )
         self.targets = _resolve_targets(target_columns)
         required = (*KEY_COLUMNS, *self.feature_columns, *self.targets.values())

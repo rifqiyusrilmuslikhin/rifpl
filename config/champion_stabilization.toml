@@ -1,0 +1,155 @@
+schema_version = "1.0.0"
+seeds = [42, 7, 2026, 31415, 27182]
+discovery_windows = ["discovery_1", "discovery_2"]
+confirmation_window = "confirmation"
+primary_metric = "ndcg_at_10"
+bootstrap_samples = 2000
+bootstrap_seed = 42
+
+# These columns are the nullable audited Understat arm. The FPL-only arm removes exactly these
+# columns; every other feature and every scored row remains identical.
+understat_features = [
+    "xg_per90_last5",
+    "xa_per90_last5",
+    "shots_per90_last5",
+    "key_passes_per90_last5",
+    "team_xg_mean_last5",
+    "team_xga_mean_last5",
+    "opp_xg_mean_last5",
+    "opp_xga_mean_last5",
+]
+
+[guardrails]
+minimum_spearman_delta = 0.0
+maximum_mae_regression = 0.0
+maximum_absolute_bias_regression = 0.0
+require_nonnegative_paired_ci = true
+
+[[feature_groups]]
+id = "current_context"
+hypothesis = "Deadline context, schedule, availability, and history depth improve next-GW opportunity estimates."
+features = [
+    "position",
+    "price",
+    "fixture_count",
+    "home_fixture_count",
+    "fixture_difficulty_mean",
+    "fixture_difficulty_min",
+    "rest_days_before_first_fixture",
+    "days_since_last_epl_minutes",
+    "status_risk_ordinal",
+    "chance_of_playing",
+    "history_appearances_count",
+    "season_phase",
+]
+
+[[feature_groups]]
+id = "participation_history"
+hypothesis = "Recent minutes and starting patterns identify rotation and non-playing risk."
+features = [
+    "minutes_last_appearance",
+    "minutes_mean_last3",
+    "minutes_mean_last5",
+    "minutes_std_last5",
+    "play_any_rate_last5",
+    "minutes_60_rate_last5",
+    "starts_rate_last5",
+]
+
+[[feature_groups]]
+id = "fpl_player_output"
+hypothesis = "Recent official FPL output and event rates add player-quality signal beyond minutes."
+features = [
+    "points_mean_last3",
+    "points_mean_last5",
+    "points_per90_last5",
+    "goals_per90_last5",
+    "assists_per90_last5",
+    "bps_per90_last5",
+    "bonus_per90_last5",
+    "yellow_cards_per90_last10",
+    "points_home_away_relevant_mean_last5",
+]
+
+[[feature_groups]]
+id = "understat_signal"
+hypothesis = "Audited underlying attacking and team-strength data improve forecasts beyond FPL-only history."
+features = [
+    "xg_per90_last5",
+    "xa_per90_last5",
+    "shots_per90_last5",
+    "key_passes_per90_last5",
+    "team_xg_mean_last5",
+    "team_xga_mean_last5",
+    "opp_xg_mean_last5",
+    "opp_xga_mean_last5",
+]
+
+[[feature_groups]]
+id = "team_and_opponent_context"
+hypothesis = "Prior team and opponent performance supplies matchup strength unavailable from player history alone."
+features = [
+    "team_goals_for_mean_last5",
+    "team_xg_mean_last5",
+    "team_goals_against_mean_last5",
+    "team_xga_mean_last5",
+    "team_clean_sheet_rate_last5",
+    "team_win_rate_last5",
+    "opp_goals_for_mean_last5",
+    "opp_xg_mean_last5",
+    "opp_goals_against_mean_last5",
+    "opp_xga_mean_last5",
+    "opp_clean_sheet_rate_last5",
+    "opp_loss_rate_last5",
+    "attack_matchup",
+    "clean_sheet_matchup",
+]
+
+[[feature_groups]]
+id = "explicit_matchups"
+hypothesis = "Predeclared attack and clean-sheet interactions add value beyond their component features."
+features = ["attack_matchup", "clean_sheet_matchup"]
+
+# This is the complete, small grid declared before any Sprint 11 result is inspected. The first
+# entry reproduces the Sprint 9 finalist. Grid arms are never run on confirmation.
+[[hyperparameter_grid]]
+id = "baseline"
+n_estimators = 600
+learning_rate = 0.03
+max_depth = 4
+min_child_weight = 10.0
+subsample = 0.8
+colsample_bytree = 0.8
+reg_lambda = 5.0
+reg_alpha = 0.1
+early_stopping_rounds = 50
+tree_method = "hist"
+n_jobs = 1
+
+[[hyperparameter_grid]]
+id = "shallow_regularized"
+n_estimators = 600
+learning_rate = 0.03
+max_depth = 3
+min_child_weight = 15.0
+subsample = 0.8
+colsample_bytree = 0.8
+reg_lambda = 8.0
+reg_alpha = 0.2
+early_stopping_rounds = 50
+tree_method = "hist"
+n_jobs = 1
+
+[[hyperparameter_grid]]
+id = "lower_variance"
+n_estimators = 600
+learning_rate = 0.03
+max_depth = 4
+min_child_weight = 15.0
+subsample = 0.9
+colsample_bytree = 0.9
+reg_lambda = 10.0
+reg_alpha = 0.2
+early_stopping_rounds = 50
+tree_method = "hist"
+n_jobs = 1
